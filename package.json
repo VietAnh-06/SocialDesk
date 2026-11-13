@@ -1,0 +1,55 @@
+{
+  "name": "socialdesk",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "vinext dev",
+    "build": "vinext build && node scripts/build-state.mjs stamp",
+    "start": "node scripts/local.mjs serve",
+    "lint": "oxlint",
+    "format": "oxfmt",
+    "db:generate": "drizzle-kit generate",
+    "typecheck": "tsc --noEmit",
+    "db:local": "node scripts/local.mjs migrate",
+    "test:unit": "node --experimental-strip-types --test tests/security.test.mjs tests/facebook.test.mjs",
+    "test:e2e": "playwright test",
+    "test:worker": "node --experimental-strip-types --test tests/worker.test.mjs",
+    "test:local": "node --experimental-strip-types --test tests/local.test.mjs tests/build-state.test.mjs",
+    "test:internet": "node --experimental-strip-types --test tests/internet.test.mjs",
+    "local:configure": "node scripts/configure-local.mjs",
+    "local:serve": "node scripts/start-local.mjs local",
+    "local:share": "node scripts/start-local.mjs share",
+    "local:package": "node scripts/package-local.mjs"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-server-dom-webpack": "^19.3.1",
+    "vinext": "^1.4.5"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.68.0",
+    "@cloudflare/workers-types": "^5.20261110.1",
+    "@openai/sites-vite-plugin": "0.2.0",
+    "@playwright/test": "^1.65.0",
+    "@tailwindcss/postcss": "4.2.1",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "^0.5.39",
+    "drizzle-kit": "0.31.10",
+    "oxfmt": "^0.78.0",
+    "oxlint": "1.76.0",
+    "oxlint-tsgolint": "7.0.2001",
+    "tailwindcss": "4.2.1",
+    "typescript": "5.9.3",
+    "vite": "^8.3.7",
+    "wrangler": "^4.160.0"
+  },
+  "type": "module"
+}

@@ -1,0 +1,37 @@
+SOCIALDESK — CHỈ SỬ DỤNG TRÊN MÁY NÀY
+
+1. Chạy CHAY-LOCAL.cmd.
+2. Mở http://localhost:8787 trong trình duyệt trên máy này.
+3. Giữ cửa sổ chương trình mở khi sử dụng. Nhấn Ctrl+C để dừng.
+
+BÌNH LUẬN VÀ GIAO DIỆN MỚI
+Chọn Bình luận trong menu để đọc, trả lời, sửa bình luận của Fanpage,
+ẩn/hiện và xóa bình luận. Xem BINH-LUAN.md để thêm quyền Facebook cần thiết.
+Kết nối cũ cần cấp lại quyền sau khi thêm chức năng bình luận.
+
+CHAY-LOCAL.cmd chỉ lắng nghe trên địa chỉ loopback của máy và không tạo
+đường hầm Internet. Không cần chạy CHIA-SE-INTERNET.cmd.
+Dữ liệu được lưu trong .socialdesk/data; cấu hình trong .dev.vars.
+
+KẾT NỐI FACEBOOK
+Hướng dẫn tự mở sau khi đăng nhập nếu chưa có Fanpage.
+Các bước: Bắt đầu → Chọn Fanpage trên Facebook → Hoàn tất.
+Nếu chọn Để sau, mở lại từ Bắt đầu hướng dẫn ở Tổng quan hoặc
+Hướng dẫn kết nối trên thanh bên.
+Thông tin Meta chỉ nằm trong phần Dành cho người cài đặt.
+Mỗi Fanpage có nút Kiểm tra kết nối và Kết nối lại.
+Xem KET-NOI-FACEBOOK.md để biết các trạng thái và cách xử lý.
+App Secret chưa được sao chép từ website cũ xuống máy. Chạy CAU-HINH.cmd
+để nhập trực tiếp trên máy, giữ trống địa chỉ HTTPS cố định. Không gửi
+App Secret trong chat. Sau khi lưu, khởi động lại CHAY-LOCAL.cmd.
+Callback của bản local: http://localhost:8787/api/facebook/callback
+Cấu hình callback tương ứng trong Meta App ở chế độ thử nghiệm.
+Nếu Meta từ chối địa chỉ HTTP localhost, cần xử lý cấu hình OAuth/HTTPS
+trên máy; không tự bật chia sẻ Internet.
+Giữ lại Meta App để phần mềm tiếp tục kết nối và quản lý Fanpage.
+
+WEBSITE CŨ
+Bản local độc lập với socialdesk-vn.thaoanh-4434.chatgpt.site.
+Dữ liệu và tài khoản đăng nhập trên website cũ không tự chuyển về máy.
+Đăng ký tài khoản SocialDesk mới trên bản local.
+Chỉ xóa website cũ khi đã giữ lại dữ liệu cần dùng ở đó.
