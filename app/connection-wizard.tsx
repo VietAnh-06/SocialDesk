@@ -7,6 +7,7 @@ export type WizardRequest = {
   mode: 'connect' | 'reconnect' | 'check';
   connectionId?: string;
   outcome?: string;
+  reason?: string;
 };
 type PageConnection = {
   id: string;
@@ -25,6 +26,16 @@ const outcomes: Record<string, string> = {
     'Bạn chưa cấp quyền cho đúng Fanpage cần kết nối lại. Kết nối cũ vẫn được giữ. Hãy thử lại và chọn đúng Fanpage.',
   failed:
     'Chưa kết nối được với Facebook. Bạn có thể thử lại. Nếu vẫn gặp lỗi, hãy nhờ người cài đặt kiểm tra ứng dụng.',
+};
+const failureReasons: Record<string, string> = {
+  token_exchange_failed:
+    'SocialDesk chưa hoàn tất xác thực với Facebook. Kiểm tra kết nối Internet trên máy chạy SocialDesk rồi thử lại. Nếu lỗi vẫn còn, người cài đặt cần kiểm tra App Secret và địa chỉ quay lại.',
+  token_refresh_failed:
+    'SocialDesk chưa hoàn tất phiên đăng nhập Facebook. Kiểm tra Internet trên máy chạy SocialDesk rồi thử kết nối lại.',
+  pages_fetch_failed:
+    'Đã đăng nhập Facebook nhưng SocialDesk chưa nhận được danh sách Fanpage. Kiểm tra Internet và quyền truy cập Fanpage rồi thử lại.',
+  save_failed:
+    'Chưa lưu được kết nối Fanpage trên máy. Hãy nhờ người cài đặt kiểm tra dữ liệu và khóa mã hóa trước khi thử lại.',
 };
 async function load<T>(
   path: string,
@@ -412,7 +423,19 @@ export default function ConnectionWizard({
             {request.outcome && request.outcome !== 'success' && (
               <div className="wizard-summary attention" role="alert">
                 <Tick ok={false} />
-                <p>{outcomes[request.outcome] || outcomes.failed}</p>
+                <div>
+                  <strong>Chưa hoàn tất kết nối</strong>
+                  <p>
+                    {(request.outcome === 'failed' &&
+                      request.reason &&
+                      failureReasons[request.reason]) ||
+                      outcomes[request.outcome] ||
+                      outcomes.failed}
+                  </p>
+                  <p>
+                    Bước 3 sẽ tự mở khi SocialDesk nhận và lưu được Fanpage.
+                  </p>
+                </div>
               </div>
             )}
             <ol className="wizard-instructions">

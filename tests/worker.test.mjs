@@ -112,6 +112,7 @@ await test(
     let commentHidden = false;
     let rejectPage = false;
     let diagnosticMode = 'ready';
+    let oauthFailure = '';
     const files = await readdir('dist/server', { recursive: true });
     const mf = new Miniflare(
       convertV4MiniflareOptions({
@@ -196,7 +197,17 @@ await test(
               id: diagnosticMode === 'wrong-page' ? '999' : '101',
               name: 'Test Page 101',
             });
-          if (u.pathname.endsWith('/oauth/access_token'))
+          if (u.pathname.endsWith('/oauth/access_token')) {
+            if (
+              oauthFailure ===
+              (u.searchParams.has('grant_type')
+                ? 'token_refresh_failed'
+                : 'token_exchange_failed')
+            )
+              return Response.json(
+                { error: { code: 190, message: 'NEVER_ECHO_THIS_TOKEN' } },
+                { status: 400 },
+              );
             return Response.json({
               access_token: u.searchParams.has('grant_type')
                 ? u.searchParams.get('fb_exchange_token')?.endsWith('-b')
@@ -206,7 +217,13 @@ await test(
                   ? 'short-user-token-b'
                   : 'short-user-token',
             });
-          if (u.pathname.endsWith('/me/accounts'))
+          }
+          if (u.pathname.endsWith('/me/accounts')) {
+            if (oauthFailure === 'pages_fetch_failed')
+              return Response.json(
+                { error: { code: 200, message: 'NEVER_ECHO_THIS_TOKEN' } },
+                { status: 400 },
+              );
             return Response.json({
               data: (request.headers.get('authorization') ===
               'Bearer long-user-token-b'
@@ -218,6 +235,7 @@ await test(
                 access_token: `page-token-${id}`,
               })),
             });
+          }
           const path = u.pathname.replace('/v25.0/', '');
           if (path === '101/posts')
             return Response.json({
@@ -838,6 +856,40 @@ await test(
         (await (await call('bootstrap')).json()).connections.length,
         4,
       );
+      for (const reason of [
+        'token_exchange_failed',
+        'token_refresh_failed',
+        'pages_fetch_failed',
+      ]) {
+        oauthFailure = reason;
+        const retry = await call(
+          `facebook/connect?guided=1&connectionId=${firstPage.id}`,
+        );
+        const retryState = new URL(
+          retry.headers.get('location'),
+        ).searchParams.get('state');
+        const failed = await call(
+          `facebook/callback?state=${retryState}&code=local-test-code`,
+        );
+        assert.equal(failed.status, 302);
+        const result = new URL(failed.headers.get('location'));
+        assert.equal(result.searchParams.get('connect'), 'failed');
+        assert.equal(result.searchParams.get('reason'), reason);
+        assert.equal(result.searchParams.get('wizard'), '1');
+        assert.equal(result.searchParams.get('connectionId'), firstPage.id);
+        assert.equal(result.href.includes('NEVER_ECHO_THIS_TOKEN'), false);
+        assert.equal(
+          (
+            await call(
+              `facebook/callback?state=${retryState}&code=local-test-code`,
+            )
+          ).status,
+          400,
+        );
+        const preserved = await (await call('bootstrap')).json();
+        assert.deepEqual(preserved.connections, afterReconnect.connections);
+        assert.deepEqual(preserved.posts, afterReconnect.posts);
+      }
     } finally {
       await mf.dispose();
     }

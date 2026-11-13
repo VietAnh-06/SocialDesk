@@ -411,6 +411,36 @@ test('unverified permissions remain unknown; checking and reconnecting are avail
   ).toBeVisible();
 });
 
+test('callback failure explains why step three has not opened and allows retry', async ({
+  page,
+}) => {
+  const mock = await mockWizard(page);
+  await page.goto(
+    '/?connect=failed&wizard=1&connectionId=page-one&reason=token_exchange_failed',
+  );
+  const wizard = page.getByRole('dialog', {
+    name: 'Hướng dẫn kết nối Facebook',
+  });
+  await expect(wizard.getByRole('alert')).toContainText(
+    'Kiểm tra kết nối Internet trên máy chạy SocialDesk',
+  );
+  await expect(wizard.getByRole('alert')).toContainText(
+    'Bước 3 sẽ tự mở khi SocialDesk nhận và lưu được Fanpage',
+  );
+  await expect(
+    wizard.getByRole('heading', { name: 'Kết nối lại Fanpage của An' }),
+  ).toBeVisible();
+  await wizard
+    .getByRole('link', { name: 'Đăng nhập lại trên Facebook' })
+    .click();
+  await expect(
+    wizard.getByRole('heading', { name: 'Hoàn tất kết nối' }),
+  ).toBeVisible();
+  expect(
+    mock.requests.filter((path) => path.includes('facebook/connect')),
+  ).toHaveLength(1);
+});
+
 test('cancelled Facebook authorization returns to step two with recovery guidance', async ({
   page,
 }) => {

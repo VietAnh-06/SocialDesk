@@ -259,6 +259,7 @@ export default function Home() {
           setWizard({
             mode: query.get('connectionId') ? 'reconnect' : 'connect',
             outcome: connection,
+            reason: query.get('reason') || undefined,
             connectionId: query.get('connectionId') || undefined,
           });
         setToast(

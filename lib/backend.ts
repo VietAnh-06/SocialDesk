@@ -294,8 +294,9 @@ async function oauth(req: Request, u: User, path: string, url: URL) {
         .bind(intent.connectionId, u.id)
         .first<{ id: string; remote_id: string }>()
     : null;
-  function returnToApp(outcome: string) {
+  function returnToApp(outcome: string, reason?: string) {
     const query = new URLSearchParams({ connect: outcome });
+    if (reason) query.set('reason', reason);
     if (intent.guided) query.set('wizard', '1');
     if (target) query.set('connectionId', target.id);
     return Response.redirect(`${origin}/?${query}`, 302);
@@ -304,6 +305,7 @@ async function oauth(req: Request, u: User, path: string, url: URL) {
   if (url.searchParams.has('error')) return returnToApp('cancelled');
   const code = url.searchParams.get('code');
   check(code, 'Facebook chưa trả về mã kết nối.');
+  let failureReason = 'token_exchange_failed';
   try {
     const params = new URLSearchParams({
       client_id: env.META_APP_ID,
@@ -322,6 +324,7 @@ async function oauth(req: Request, u: User, path: string, url: URL) {
       400,
     );
     // Exchange the initial token for a long-lived user token before getting Page tokens.
+    failureReason = 'token_refresh_failed';
     const longParams = new URLSearchParams({
       grant_type: 'fb_exchange_token',
       client_id: env.META_APP_ID,
@@ -341,6 +344,7 @@ async function oauth(req: Request, u: User, path: string, url: URL) {
     let nextPath = 'me/accounts?fields=id,name,access_token&limit=100';
     let count = 0;
     for (let page = 0; page < 10; page++) {
+      failureReason = 'pages_fetch_failed';
       const pages = (await graph(nextPath, longData.access_token, {
         version: env.META_GRAPH_VERSION,
       })) as {
@@ -349,6 +353,7 @@ async function oauth(req: Request, u: User, path: string, url: URL) {
       };
       for (const p of pages.data || []) {
         if (p.access_token && (!target || p.id === target.remote_id)) {
+          failureReason = 'save_failed';
           await upsertConnection(u, p.id, p.name, p.access_token);
           count++;
         }
@@ -359,7 +364,8 @@ async function oauth(req: Request, u: User, path: string, url: URL) {
     await log(u, `Kết nối Facebook: ${count} Fanpage.`);
     return returnToApp(count ? 'success' : target ? 'page_missing' : 'empty');
   } catch {
-    return returnToApp('failed');
+    // Only expose a fixed stage code; provider responses can contain credentials.
+    return returnToApp('failed', failureReason);
   }
 }
 
