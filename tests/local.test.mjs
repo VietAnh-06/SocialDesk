@@ -18,13 +18,16 @@ await test('local setup keeps encryption keys and previously configured secrets 
   try {
     const first = ensureConfig(dir);
     assert.match(first.TOKEN_ENCRYPTION_KEY, /^[a-f0-9]{64}$/);
+    assert.equal(first.META_COMMENTS_ENABLED, 'false');
     writeConfig(join(dir, '.dev.vars'), {
       ...first,
       META_APP_SECRET: 'local-test-secret',
+      META_COMMENTS_ENABLED: 'true',
     });
     const second = ensureConfig(dir);
     assert.equal(second.TOKEN_ENCRYPTION_KEY, first.TOKEN_ENCRYPTION_KEY);
     assert.equal(second.META_APP_SECRET, 'local-test-secret');
+    assert.equal(second.META_COMMENTS_ENABLED, 'true');
     assert.deepEqual(parseConfig('META_APP_ID="123"\nMETA_APP_SECRET=abc\n'), {
       META_APP_ID: '123',
       META_APP_SECRET: 'abc',

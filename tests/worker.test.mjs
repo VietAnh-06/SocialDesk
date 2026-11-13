@@ -6,6 +6,104 @@ import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import { randomToken } from '../lib/security.ts';
 
 await test(
+  'comment permissions require operator setup and explicit user selection',
+  { timeout: 30000 },
+  async () => {
+    const files = await readdir('dist/server', { recursive: true });
+    const mf = new Miniflare(
+      convertV4MiniflareOptions({
+        modulesRoot: resolve('dist/server'),
+        modules: [
+          { type: 'ESModule', path: resolve('dist/server/index.js') },
+          ...files
+            .filter((f) => f.endsWith('.js') && f !== 'index.js')
+            .map((f) => ({
+              type: 'ESModule',
+              path: resolve('dist/server', f),
+            })),
+        ],
+        compatibilityDate: '2026-11-03',
+        compatibilityFlags: ['nodejs_compat'],
+        d1Databases: ['DB'],
+        r2Buckets: ['FILES'],
+        bindings: {
+          TOKEN_ENCRYPTION_KEY: randomToken(),
+          META_APP_ID: '1496006092516967',
+          META_APP_SECRET: 'local-test-secret',
+          META_COMMENTS_ENABLED: 'true',
+        },
+        outboundService: () => {
+          throw new Error('OAuth redirect must not call Facebook');
+        },
+      }),
+    );
+    try {
+      const database = await mf.getD1Database('DB');
+      const sql = await readFile(
+        'drizzle/0000_blushing_madame_hydra.sql',
+        'utf8',
+      );
+      await database.batch(
+        sql
+          .split('--> statement-breakpoint')
+          .filter((s) => s.trim())
+          .map((s) => database.prepare(s)),
+      );
+      const register = await mf.dispatchFetch(
+        'http://localhost/api/auth/register',
+        {
+          method: 'POST',
+          headers: {
+            origin: 'http://localhost',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: 'Optional grants',
+            email: 'optional@example.com',
+            password: 'Local-test-password-123',
+          }),
+        },
+      );
+      assert.equal(register.status, 200);
+      const headers = {
+        cookie: register.headers.get('set-cookie').split(';')[0],
+      };
+      const setup = await (
+        await mf.dispatchFetch('http://localhost/api/facebook/setup', {
+          headers,
+        })
+      ).json();
+      assert.equal(setup.commentsPermissionRequestEnabled, true);
+      for (const includeComments of [false, true]) {
+        const response = await mf.dispatchFetch(
+          `http://localhost/api/facebook/connect${includeComments ? '?permissions=comments' : ''}`,
+          { headers, redirect: 'manual' },
+        );
+        assert.equal(response.status, 302);
+        const oauth = new URL(response.headers.get('location'));
+        assert.equal(
+          oauth.searchParams.get('scope'),
+          [
+            'pages_show_list',
+            'pages_read_engagement',
+            'pages_manage_posts',
+            ...(includeComments
+              ? ['pages_read_user_content', 'pages_manage_engagement']
+              : []),
+          ].join(','),
+        );
+        assert.equal(
+          oauth.searchParams.get('auth_type'),
+          includeComments ? 'rerequest' : null,
+        );
+      }
+    } finally {
+      await mf.dispose();
+    }
+  },
+);
+
+await test(
   'OAuth callback imports four Pages and publish/edit/delete keeps per-Page results',
   { timeout: 60000 },
   async () => {
@@ -69,7 +167,9 @@ await test(
                       scopes: [
                         'pages_show_list',
                         'pages_read_engagement',
-                        'pages_manage_posts',
+                        ...(diagnosticMode === 'posting-denied'
+                          ? []
+                          : ['pages_manage_posts']),
                         ...(diagnosticMode === 'limited'
                           ? []
                           : [
@@ -262,13 +362,13 @@ await test(
       assert.equal(connect.status, 302);
       const location = new URL(connect.headers.get('location'));
       assert.equal(location.hostname, 'www.facebook.com');
-      assert.match(
+      assert.equal(
         location.searchParams.get('scope'),
-        /pages_manage_engagement/,
+        'pages_show_list,pages_read_engagement,pages_manage_posts',
       );
-      assert.match(
-        location.searchParams.get('scope'),
-        /pages_read_user_content/,
+      assert.equal(
+        (await call('facebook/connect?permissions=comments')).status,
+        409,
       );
       assert.equal(
         location.searchParams.get('redirect_uri'),
@@ -285,6 +385,7 @@ await test(
       const data = await (await call('bootstrap')).json();
       const setup = await (await call('facebook/setup')).json();
       assert.equal(setup.ready, true);
+      assert.equal(setup.commentsPermissionRequestEnabled, false);
       assert.equal(setup.callbackVerified, false);
       assert.equal(
         setup.callbackUrl,
@@ -646,13 +747,14 @@ await test(
       );
       for (const [mode, status] of [
         ['ready', 'ready'],
-        ['limited', 'limited'],
+        ['limited', 'ready'],
+        ['posting-denied', 'limited'],
         ['expired', 'expired'],
         ['denied', 'unknown'],
         ['wrong-app', 'unavailable'],
         ['wrong-page', 'unavailable'],
         ['no-scopes', 'unknown'],
-        ['granular', 'limited'],
+        ['granular', 'ready'],
         ['bad-app', 'configuration_required'],
       ]) {
         diagnosticMode = mode;
@@ -674,6 +776,8 @@ await test(
           assert.equal(checked.postingReady, true);
           assert.equal(checked.commentsReady, false);
         }
+        if (mode === 'posting-denied')
+          assert.equal(checked.postingReady, false);
         if (mode === 'no-scopes' || mode === 'denied')
           assert.equal(
             checked.permissions.every((p) => p.granted === null),

@@ -95,9 +95,16 @@ export default function ConnectionWizard({
   const [checkError, setCheckError] = useState('');
   const [copyNotice, setCopyNotice] = useState('');
   const [leaving, setLeaving] = useState(false);
+  const [includeComments, setIncludeComments] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const selected = pages.find((p) => p.id === selectedId);
   const report = reports[selectedId];
+  const canRequestComments = !!setup?.commentsPermissionRequestEnabled;
+  const missingPermissions =
+    report?.permissions.filter(
+      (p) =>
+        p.granted === false && (p.group !== 'comments' || canRequestComments),
+    ) || [];
   const friendlyTitle = report
     ? {
         ready: 'Fanpage đã sẵn sàng',
@@ -110,7 +117,11 @@ export default function ConnectionWizard({
     : '';
   const friendlyMessage = report
     ? report.status === 'ready'
-      ? 'Bạn có thể bắt đầu quản lý bài viết và bình luận của Fanpage.'
+      ? report.commentsReady
+        ? 'Bạn có thể bắt đầu quản lý bài viết và bình luận của Fanpage.'
+        : canRequestComments
+          ? 'Bạn đã có thể đăng, sửa và xóa bài viết. Nếu muốn quản lý bình luận, bấm “Bật quản lý bình luận”.'
+          : 'Bạn đã có thể đăng, sửa và xóa bài viết. Chức năng bình luận cần được người cài đặt thiết lập thêm.'
       : report.status === 'limited'
         ? report.postingReady && !report.commentsReady
           ? 'Bạn đã có thể đăng bài. Để trả lời và quản lý bình luận, bấm “Cho phép thêm quyền” rồi đồng ý trên Facebook.'
@@ -127,6 +138,8 @@ export default function ConnectionWizard({
   const reconnectPage = pages.find((p) => p.id === reconnectId);
   const params = new URLSearchParams({ guided: '1' });
   if (reconnectId) params.set('connectionId', reconnectId);
+  if (includeComments && canRequestComments)
+    params.set('permissions', 'comments');
 
   useEffect(() => {
     const root = dialog.current;
@@ -204,8 +217,9 @@ export default function ConnectionWizard({
       );
     }
   }
-  function reconnect() {
+  function reconnect(withComments = false) {
     setReconnectId(selectedId);
+    setIncludeComments(withComments && canRequestComments);
     setStep(canConnect ? 2 : 1);
     setLeaving(false);
   }
@@ -362,9 +376,12 @@ export default function ConnectionWizard({
                     </div>
                     {copyNotice && <output>{copyNotice}</output>}
                     <p>
-                      Thêm các quyền Pages cho đăng bài và bình luận trong Meta
-                      App. App Secret được giữ trên máy chủ, không hiển thị
-                      trong màn hình này.
+                      Kết nối mặc định chỉ xin quyền đăng bài. Để bật bình luận,
+                      thêm <code>pages_read_user_content</code> và{' '}
+                      <code>pages_manage_engagement</code> trong Meta App, rồi
+                      chạy <code>CAU-HINH.cmd</code> và bật xin quyền bình luận.
+                      Nếu Facebook báo Invalid Scopes, tắt tùy chọn bình luận và
+                      kiểm tra lại các quyền trong Meta App.
                     </p>
                     <a
                       className="text-button"
@@ -425,12 +442,31 @@ export default function ConnectionWizard({
                 <div>
                   <strong>Cho phép SocialDesk quản lý Fanpage</strong>
                   <p>
-                    Cho phép đọc bài viết, đăng bài và quản lý bình luận. Sau đó
-                    bấm tiếp tục để quay về SocialDesk.
+                    Cho phép đọc và đăng bài viết
+                    {includeComments && canRequestComments
+                      ? ', quản lý bình luận'
+                      : ''}
+                    . Sau đó bấm tiếp tục để quay về SocialDesk.
                   </p>
                 </div>
               </li>
             </ol>
+            <div className="wizard-comment-option">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={includeComments && canRequestComments}
+                  disabled={!canRequestComments}
+                  onChange={(e) => setIncludeComments(e.target.checked)}
+                />
+                <strong>Thêm chức năng quản lý bình luận (tùy chọn)</strong>
+              </label>
+              <p>
+                {canRequestComments
+                  ? 'Chọn nếu bạn muốn đọc, trả lời, ẩn và xóa bình luận. Nếu Facebook báo lỗi quyền, bỏ chọn để kết nối đăng bài trước.'
+                  : 'Người cài đặt cần bật chức năng này trước. Bạn vẫn có thể kết nối Fanpage để đăng bài ngay.'}
+              </p>
+            </div>
             {setupLoading && (
               <output className="wizard-loading">Đang chuẩn bị kết nối…</output>
             )}
@@ -454,8 +490,8 @@ export default function ConnectionWizard({
               </p>
               <p>
                 Khi Facebook hỏi các chức năng được phép sử dụng, hãy đồng ý
-                đăng bài và quản lý bình luận. Nếu vẫn chưa kết nối được, nhờ
-                người cài đặt hỗ trợ.
+                đăng bài. Bình luận chỉ được hỏi khi bạn chọn thêm chức năng
+                này. Nếu vẫn chưa kết nối được, nhờ người cài đặt hỗ trợ.
               </p>
             </details>
           </section>
@@ -466,7 +502,8 @@ export default function ConnectionWizard({
             <h3>Hoàn tất kết nối</h3>
             <p className="wizard-intro">
               SocialDesk đang kiểm tra Fanpage bạn vừa chọn. Khi mọi thứ đã sẵn
-              sàng, bạn có thể bắt đầu đăng bài và trả lời bình luận.
+              sàng, bạn có thể bắt đầu quản lý bài viết. Trạng thái bình luận
+              được hiển thị riêng bên dưới.
             </p>
             {request.outcome === 'success' && (
               <p className="wizard-tip">{outcomes.success}</p>
@@ -550,19 +587,19 @@ export default function ConnectionWizard({
                         {report.commentsReady === true
                           ? 'Sẵn sàng'
                           : report.commentsReady === false
-                            ? 'Cần cho phép'
+                            ? canRequestComments
+                              ? 'Cần cho phép'
+                              : 'Cần người cài đặt bật'
                             : 'Đang chờ kiểm tra'}
                       </span>
                     </div>
-                    {report.permissions.some((p) => p.granted === false) && (
+                    {!!missingPermissions.length && (
                       <div className="wizard-missing-features">
                         <strong>Facebook cần bạn cho phép thêm:</strong>
                         <ul>
-                          {report.permissions
-                            .filter((p) => p.granted === false)
-                            .map((p) => (
-                              <li key={p.key}>{p.label}</li>
-                            ))}
+                          {missingPermissions.map((p) => (
+                            <li key={p.key}>{p.label}</li>
+                          ))}
                         </ul>
                       </div>
                     )}
@@ -657,32 +694,47 @@ export default function ConnectionWizard({
           </a>
         )}
         {step === 3 && (
-          <button
-            className="button primary"
-            disabled={checking || setupLoading}
-            onClick={() => {
-              if (report?.status === 'configuration_required') setStep(1);
-              else if (report?.status === 'unknown')
-                setCheckRevision((v) => v + 1);
-              else if (report && report.status !== 'ready' && selected)
-                reconnect();
-              else onClose();
-            }}
-          >
-            {checking
-              ? 'Đang kiểm tra…'
-              : report?.status === 'configuration_required'
-                ? 'Xem hướng dẫn cho người cài đặt'
-                : report?.status === 'unknown'
-                  ? 'Thử kiểm tra lại'
-                  : report && report.status !== 'ready' && selected
-                    ? report.status === 'limited'
-                      ? 'Cho phép thêm quyền'
-                      : 'Đăng nhập lại Facebook'
-                    : report?.status === 'ready'
-                      ? 'Bắt đầu sử dụng'
-                      : 'Đóng hướng dẫn'}
-          </button>
+          <div className="button-row">
+            {report?.status === 'ready' &&
+              report.commentsReady === false &&
+              canRequestComments && (
+                <button
+                  className="button secondary"
+                  disabled={checking || setupLoading}
+                  onClick={() => reconnect(true)}
+                >
+                  Bật quản lý bình luận
+                </button>
+              )}
+            <button
+              className="button primary"
+              disabled={checking || setupLoading}
+              onClick={() => {
+                if (report?.status === 'configuration_required') setStep(1);
+                else if (report?.status === 'unknown')
+                  setCheckRevision((v) => v + 1);
+                else if (report && report.status !== 'ready' && selected)
+                  reconnect(
+                    report.status === 'limited' && !!report.postingReady,
+                  );
+                else onClose();
+              }}
+            >
+              {checking
+                ? 'Đang kiểm tra…'
+                : report?.status === 'configuration_required'
+                  ? 'Xem hướng dẫn cho người cài đặt'
+                  : report?.status === 'unknown'
+                    ? 'Thử kiểm tra lại'
+                    : report && report.status !== 'ready' && selected
+                      ? report.status === 'limited'
+                        ? 'Cho phép thêm quyền'
+                        : 'Đăng nhập lại Facebook'
+                      : report?.status === 'ready'
+                        ? 'Bắt đầu sử dụng'
+                        : 'Đóng hướng dẫn'}
+            </button>
+          </div>
         )}
       </footer>
     </dialog>

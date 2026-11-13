@@ -41,6 +41,17 @@ try {
     true,
   );
   if (secret) config.META_APP_SECRET = secret;
+  console.log(
+    'Chi bat binh luan sau khi da them pages_read_user_content va pages_manage_engagement trong Meta App.',
+  );
+  const comments = await ask(
+    `Bat xin quyen quan ly binh luan? y/n [${/^(true|1)$/i.test(config.META_COMMENTS_ENABLED) ? 'y' : 'n'}]: `,
+  );
+  if (comments) {
+    if (!/^(y|n)$/i.test(comments)) throw new Error('Chi nhap y hoac n.');
+    config.META_COMMENTS_ENABLED =
+      comments.toLowerCase() === 'y' ? 'true' : 'false';
+  }
   const fixed = await ask(
     `Dia chi HTTPS co dinh [${config.PUBLIC_APP_URL || 'dang dung link tam'}] (nhap - de dung link tam): `,
   );
@@ -57,7 +68,7 @@ try {
   }
   writeConfig(resolve('.dev.vars'), config);
   console.log(
-    '\nDa luu cau hinh. Dong va mo lai CHIA-SE-INTERNET.cmd de ap dung.',
+    '\nDa luu cau hinh. Dong va mo lai CHAY-LOCAL.cmd (hoac CHIA-SE-INTERNET.cmd) de ap dung.',
   );
   console.log(
     'App Secret chi duoc luu tren may chu, khong hien cho nguoi dung website.',

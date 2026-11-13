@@ -13,6 +13,7 @@ const knownKeys = [
   'META_APP_ID',
   'META_APP_SECRET',
   'META_GRAPH_VERSION',
+  'META_COMMENTS_ENABLED',
   'PUBLIC_APP_URL',
   'TUNNEL_TOKEN',
   'LOCAL_GATEWAY_TOKEN',
@@ -61,6 +62,7 @@ export function ensureConfig(root = process.cwd()) {
   config.META_APP_ID ||= '1496006092516967';
   config.META_APP_SECRET ||= '';
   config.META_GRAPH_VERSION ||= 'v25.0';
+  config.META_COMMENTS_ENABLED ||= 'false';
   config.PUBLIC_APP_URL ||= '';
   config.TUNNEL_TOKEN ||= '';
   writeConfig(file, config);

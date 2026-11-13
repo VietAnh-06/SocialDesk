@@ -7,9 +7,14 @@ Chạy **CHAY-LOCAL.cmd**, mở **http://localhost:8787**, đăng nhập rồi c
 Ứng dụng dùng thêm `pages_read_user_content` để đọc nội dung do người dùng viết và `pages_manage_engagement` để quản lý tương tác. Giữ các quyền đăng bài hiện có: `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`.
 
 1. Mở Meta App đã tạo, vào **Use cases → Manage everything on your Page → Customize**.
-2. Thêm các quyền `pages_read_user_content` và `pages_manage_engagement` nếu chưa có.
-3. Trong SocialDesk, chọn **Tài khoản kết nối → Kết nối Facebook** để cấp lại quyền. Token cũ không tự nhận thêm quyền.
-4. Chọn Fanpage bạn có quyền quản lý. Với Meta App thử nghiệm, tài khoản Facebook phải có vai trò phù hợp trong ứng dụng.
+2. Thêm các quyền `pages_read_user_content` và `pages_manage_engagement` nếu chúng có trong danh sách quyền của ứng dụng. Hoàn tất các yêu cầu Meta hiển thị cho quyền và tài khoản thử nghiệm của bạn.
+3. Chạy **CAU-HINH.cmd**, chọn `y` ở câu hỏi bật xin quyền quản lý bình luận, rồi mở lại **CHAY-LOCAL.cmd**. Thiết lập tương ứng là `META_COMMENTS_ENABLED=true`.
+4. Trong wizard SocialDesk, chọn **Thêm chức năng quản lý bình luận (tùy chọn)** trước khi mở Facebook. Với Fanpage đã kết nối, bấm **Kiểm tra kết nối → Bật quản lý bình luận**. Token cũ không tự nhận thêm quyền.
+5. Chọn Fanpage bạn có quyền quản lý. Với Meta App thử nghiệm, tài khoản Facebook phải có vai trò phù hợp trong ứng dụng.
+
+Mặc định `META_COMMENTS_ENABLED=false`: kết nối chỉ xin ba quyền đăng bài, không xin hai quyền bình luận. Thiếu quyền bình luận không chặn kết nối hoặc đăng bài; wizard hiển thị riêng trạng thái bình luận. Kết nối cũ đã đủ quyền vẫn tiếp tục dùng bình luận được.
+
+Nếu Facebook báo **Invalid Scopes: pages_read_user_content, pages_manage_engagement**, hai quyền này chưa được Facebook chấp nhận trong yêu cầu của ứng dụng hiện tại. Bỏ chọn bình luận để kết nối đăng bài trước. Người cài đặt cần kiểm tra quyền trong Meta App; nếu chưa thêm được, giữ tùy chọn xin quyền bình luận ở `n`. Không cần xóa Fanpage hoặc tạo lại khóa mã hóa.
 
 Nếu bản local chưa có thông tin Meta App, chạy **CAU-HINH.cmd** để nhập App ID/App Secret trực tiếp trên máy; khởi động lại **CHAY-LOCAL.cmd**. Callback local là `http://localhost:8787/api/facebook/callback`. Giữ trống địa chỉ Internet khi chỉ dùng trên máy.
 

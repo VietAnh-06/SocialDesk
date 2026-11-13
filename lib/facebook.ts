@@ -56,7 +56,7 @@ export async function graph(
           ? options.resource === 'connection'
             ? 'Facebook chưa cho phép kiểm tra quyền của kết nối này. Kiểm tra Meta App hoặc kết nối lại Fanpage.'
             : options.resource === 'comment'
-              ? 'Chưa đủ quyền quản lý bình luận. Thêm pages_read_user_content và pages_manage_engagement trong Meta App, rồi kết nối lại Fanpage.'
+              ? 'Chưa đủ quyền quản lý bình luận. Mở Kiểm tra kết nối để cấp thêm quyền. Nếu chức năng chưa được bật, nhờ người cài đặt thiết lập trong Meta App.'
               : 'Chưa đủ quyền quản lý bài viết trên Fanpage này.'
           : code === 4 || code === 17 || code === 32 || code === 613
             ? 'Facebook đang giới hạn yêu cầu. Hãy thử lại sau.'
