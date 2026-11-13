@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { appendFile, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer, request } from 'node:http';
@@ -18,16 +18,17 @@ await test('local setup keeps encryption keys and previously configured secrets 
   try {
     const first = ensureConfig(dir);
     assert.match(first.TOKEN_ENCRYPTION_KEY, /^[a-f0-9]{64}$/);
-    assert.equal(first.META_COMMENTS_ENABLED, 'false');
+    assert.equal('META_COMMENTS_ENABLED' in first, false);
     writeConfig(join(dir, '.dev.vars'), {
       ...first,
       META_APP_SECRET: 'local-test-secret',
-      META_COMMENTS_ENABLED: 'true',
     });
+    // Remove the obsolete opt-in flag without replacing credentials or keys.
+    await appendFile(join(dir, '.dev.vars'), 'META_COMMENTS_ENABLED=false\n');
     const second = ensureConfig(dir);
     assert.equal(second.TOKEN_ENCRYPTION_KEY, first.TOKEN_ENCRYPTION_KEY);
     assert.equal(second.META_APP_SECRET, 'local-test-secret');
-    assert.equal(second.META_COMMENTS_ENABLED, 'true');
+    assert.equal('META_COMMENTS_ENABLED' in second, false);
     assert.deepEqual(parseConfig('META_APP_ID="123"\nMETA_APP_SECRET=abc\n'), {
       META_APP_ID: '123',
       META_APP_SECRET: 'abc',

@@ -17,7 +17,6 @@ import {
 } from './comments';
 import {
   facebookSetup,
-  commentPermissionsEnabled,
   requestedFacebookPermissions,
   inspectConnection,
   unknownHealth,
@@ -222,12 +221,6 @@ async function oauth(req: Request, u: User, path: string, url: URL) {
     503,
   );
   if (path === 'facebook/connect') {
-    const includeComments = url.searchParams.get('permissions') === 'comments';
-    check(
-      !includeComments || commentPermissionsEnabled(env),
-      'Chức năng bình luận chưa được bật. Người cài đặt cần thêm quyền trong Meta App trước. Bạn vẫn có thể kết nối Fanpage để đăng bài.',
-      409,
-    );
     const connectionId = url.searchParams.get('connectionId') || '';
     if (connectionId) {
       const target = await db()
@@ -253,9 +246,9 @@ async function oauth(req: Request, u: User, path: string, url: URL) {
       redirect_uri: redirectUri,
       state,
       response_type: 'code',
-      scope: requestedFacebookPermissions(includeComments),
+      scope: requestedFacebookPermissions(),
     });
-    if (connectionId || includeComments) params.set('auth_type', 'rerequest');
+    params.set('auth_type', 'rerequest');
     return Response.redirect(
       `https://www.facebook.com/${env.META_GRAPH_VERSION || 'v25.0'}/dialog/oauth?${params}`,
       302,

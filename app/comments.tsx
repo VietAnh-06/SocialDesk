@@ -562,9 +562,9 @@ export default function CommentsPanel({
         </div>
       </div>
       <p className="comment-permissions">
-        Các thao tác được hiển thị theo quyền Facebook cấp. Để thêm quyền bình
-        luận, mở Kiểm tra kết nối rồi chọn Bật quản lý bình luận. Nếu chưa có
-        tùy chọn này, nhờ người cài đặt thiết lập thêm.
+        SocialDesk xin quyền quản lý bình luận khi kết nối Fanpage. Nếu chưa đủ
+        quyền, mở Kiểm tra kết nối rồi chọn Cho phép thêm quyền. Nếu Facebook
+        báo quyền chưa được hỗ trợ, nhờ người cài đặt kiểm tra Meta App.
       </p>
       {edit && (
         <CommentEditor

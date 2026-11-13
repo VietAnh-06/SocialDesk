@@ -6,7 +6,7 @@ import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
 import { randomToken } from '../lib/security.ts';
 
 await test(
-  'comment permissions require operator setup and explicit user selection',
+  'all Page connection flows request comment permissions even with the obsolete disable flag',
   { timeout: 30000 },
   async () => {
     const files = await readdir('dist/server', { recursive: true });
@@ -30,7 +30,7 @@ await test(
           TOKEN_ENCRYPTION_KEY: randomToken(),
           META_APP_ID: '1496006092516967',
           META_APP_SECRET: 'local-test-secret',
-          META_COMMENTS_ENABLED: 'true',
+          META_COMMENTS_ENABLED: 'false',
         },
         outboundService: () => {
           throw new Error('OAuth redirect must not call Facebook');
@@ -58,8 +58,8 @@ await test(
             'content-type': 'application/json',
           },
           body: JSON.stringify({
-            name: 'Optional grants',
-            email: 'optional@example.com',
+            name: 'Default comments',
+            email: 'comments@example.com',
             password: 'Local-test-password-123',
           }),
         },
@@ -73,10 +73,10 @@ await test(
           headers,
         })
       ).json();
-      assert.equal(setup.commentsPermissionRequestEnabled, true);
-      for (const includeComments of [false, true]) {
+      assert.equal('commentsPermissionRequestEnabled' in setup, false);
+      for (const query of ['', '?permissions=comments', '?permissions=posts']) {
         const response = await mf.dispatchFetch(
-          `http://localhost/api/facebook/connect${includeComments ? '?permissions=comments' : ''}`,
+          `http://localhost/api/facebook/connect${query}`,
           { headers, redirect: 'manual' },
         );
         assert.equal(response.status, 302);
@@ -87,15 +87,11 @@ await test(
             'pages_show_list',
             'pages_read_engagement',
             'pages_manage_posts',
-            ...(includeComments
-              ? ['pages_read_user_content', 'pages_manage_engagement']
-              : []),
+            'pages_read_user_content',
+            'pages_manage_engagement',
           ].join(','),
         );
-        assert.equal(
-          oauth.searchParams.get('auth_type'),
-          includeComments ? 'rerequest' : null,
-        );
+        assert.equal(oauth.searchParams.get('auth_type'), 'rerequest');
       }
     } finally {
       await mf.dispose();
@@ -382,11 +378,7 @@ await test(
       assert.equal(location.hostname, 'www.facebook.com');
       assert.equal(
         location.searchParams.get('scope'),
-        'pages_show_list,pages_read_engagement,pages_manage_posts',
-      );
-      assert.equal(
-        (await call('facebook/connect?permissions=comments')).status,
-        409,
+        'pages_show_list,pages_read_engagement,pages_manage_posts,pages_read_user_content,pages_manage_engagement',
       );
       assert.equal(
         location.searchParams.get('redirect_uri'),
@@ -403,7 +395,7 @@ await test(
       const data = await (await call('bootstrap')).json();
       const setup = await (await call('facebook/setup')).json();
       assert.equal(setup.ready, true);
-      assert.equal(setup.commentsPermissionRequestEnabled, false);
+      assert.equal('commentsPermissionRequestEnabled' in setup, false);
       assert.equal(setup.callbackVerified, false);
       assert.equal(
         setup.callbackUrl,
@@ -765,14 +757,14 @@ await test(
       );
       for (const [mode, status] of [
         ['ready', 'ready'],
-        ['limited', 'ready'],
+        ['limited', 'limited'],
         ['posting-denied', 'limited'],
         ['expired', 'expired'],
         ['denied', 'unknown'],
         ['wrong-app', 'unavailable'],
         ['wrong-page', 'unavailable'],
         ['no-scopes', 'unknown'],
-        ['granular', 'ready'],
+        ['granular', 'limited'],
         ['bad-app', 'configuration_required'],
       ]) {
         diagnosticMode = mode;

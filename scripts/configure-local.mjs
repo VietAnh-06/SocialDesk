@@ -42,16 +42,8 @@ try {
   );
   if (secret) config.META_APP_SECRET = secret;
   console.log(
-    'Chi bat binh luan sau khi da them pages_read_user_content va pages_manage_engagement trong Meta App.',
+    'SocialDesk mac dinh xin quyen quan ly bai viet va binh luan. Meta App can co pages_read_user_content va pages_manage_engagement.',
   );
-  const comments = await ask(
-    `Bat xin quyen quan ly binh luan? y/n [${/^(true|1)$/i.test(config.META_COMMENTS_ENABLED) ? 'y' : 'n'}]: `,
-  );
-  if (comments) {
-    if (!/^(y|n)$/i.test(comments)) throw new Error('Chi nhap y hoac n.');
-    config.META_COMMENTS_ENABLED =
-      comments.toLowerCase() === 'y' ? 'true' : 'false';
-  }
   const fixed = await ask(
     `Dia chi HTTPS co dinh [${config.PUBLIC_APP_URL || 'dang dung link tam'}] (nhap - de dung link tam): `,
   );

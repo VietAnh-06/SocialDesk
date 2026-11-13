@@ -326,25 +326,13 @@
   flex-wrap: wrap;
   margin: 20px 0;
 }
-.wizard-comment-option {
+.wizard-default-features {
   margin: 20px 0;
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 12px;
 }
-.wizard-comment-option label {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  cursor: pointer;
-}
-.wizard-comment-option input {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  accent-color: var(--purple);
-}
-.wizard-comment-option p {
+.wizard-default-features p {
   margin: 10px 0 0;
   color: var(--muted);
   font-size: 13px;

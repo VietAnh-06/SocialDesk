@@ -106,20 +106,18 @@ export default function ConnectionWizard({
   const [checkError, setCheckError] = useState('');
   const [copyNotice, setCopyNotice] = useState('');
   const [leaving, setLeaving] = useState(false);
-  const [includeComments, setIncludeComments] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const selected = pages.find((p) => p.id === selectedId);
   const report = reports[selectedId];
-  const canRequestComments = !!setup?.commentsPermissionRequestEnabled;
   const missingPermissions =
-    report?.permissions.filter(
-      (p) =>
-        p.granted === false && (p.group !== 'comments' || canRequestComments),
-    ) || [];
+    report?.permissions.filter((p) => p.granted === false) || [];
   const friendlyTitle = report
     ? {
         ready: 'Fanpage đã sẵn sàng',
-        limited: 'Cho phép thêm chức năng',
+        limited:
+          report.postingReady && !report.commentsReady
+            ? 'Cần cấp thêm quyền bình luận'
+            : 'Cần cấp thêm quyền',
         expired: 'Facebook cần bạn đăng nhập lại',
         unavailable: 'Hãy kết nối lại Fanpage',
         unknown: 'Chưa kiểm tra được kết nối',
@@ -128,11 +126,7 @@ export default function ConnectionWizard({
     : '';
   const friendlyMessage = report
     ? report.status === 'ready'
-      ? report.commentsReady
-        ? 'Bạn có thể bắt đầu quản lý bài viết và bình luận của Fanpage.'
-        : canRequestComments
-          ? 'Bạn đã có thể đăng, sửa và xóa bài viết. Nếu muốn quản lý bình luận, bấm “Bật quản lý bình luận”.'
-          : 'Bạn đã có thể đăng, sửa và xóa bài viết. Chức năng bình luận cần được người cài đặt thiết lập thêm.'
+      ? 'Bạn có thể bắt đầu quản lý bài viết và bình luận của Fanpage.'
       : report.status === 'limited'
         ? report.postingReady && !report.commentsReady
           ? 'Bạn đã có thể đăng bài. Để trả lời và quản lý bình luận, bấm “Cho phép thêm quyền” rồi đồng ý trên Facebook.'
@@ -149,8 +143,6 @@ export default function ConnectionWizard({
   const reconnectPage = pages.find((p) => p.id === reconnectId);
   const params = new URLSearchParams({ guided: '1' });
   if (reconnectId) params.set('connectionId', reconnectId);
-  if (includeComments && canRequestComments)
-    params.set('permissions', 'comments');
 
   useEffect(() => {
     const root = dialog.current;
@@ -228,9 +220,8 @@ export default function ConnectionWizard({
       );
     }
   }
-  function reconnect(withComments = false) {
+  function reconnect() {
     setReconnectId(selectedId);
-    setIncludeComments(withComments && canRequestComments);
     setStep(canConnect ? 2 : 1);
     setLeaving(false);
   }
@@ -387,12 +378,13 @@ export default function ConnectionWizard({
                     </div>
                     {copyNotice && <output>{copyNotice}</output>}
                     <p>
-                      Kết nối mặc định chỉ xin quyền đăng bài. Để bật bình luận,
-                      thêm <code>pages_read_user_content</code> và{' '}
-                      <code>pages_manage_engagement</code> trong Meta App, rồi
-                      chạy <code>CAU-HINH.cmd</code> và bật xin quyền bình luận.
-                      Nếu Facebook báo Invalid Scopes, tắt tùy chọn bình luận và
-                      kiểm tra lại các quyền trong Meta App.
+                      Kết nối luôn xin quyền quản lý bài viết và bình luận. Thêm{' '}
+                      <code>pages_read_user_content</code> và{' '}
+                      <code>pages_manage_engagement</code> trong Meta App. Nếu
+                      Facebook báo Invalid Scopes, kiểm tra hai quyền này trong
+                      Use cases → Manage everything on your Page → Customize.
+                      Chỉ thay đổi giao diện SocialDesk không thể cấp quyền thay
+                      Meta.
                     </p>
                     <a
                       className="text-button"
@@ -465,29 +457,18 @@ export default function ConnectionWizard({
                 <div>
                   <strong>Cho phép SocialDesk quản lý Fanpage</strong>
                   <p>
-                    Cho phép đọc và đăng bài viết
-                    {includeComments && canRequestComments
-                      ? ', quản lý bình luận'
-                      : ''}
-                    . Sau đó bấm tiếp tục để quay về SocialDesk.
+                    Cho phép đọc và đăng bài viết, đọc và quản lý bình luận. Sau
+                    đó bấm tiếp tục để quay về SocialDesk.
                   </p>
                 </div>
               </li>
             </ol>
-            <div className="wizard-comment-option">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={includeComments && canRequestComments}
-                  disabled={!canRequestComments}
-                  onChange={(e) => setIncludeComments(e.target.checked)}
-                />
-                <strong>Thêm chức năng quản lý bình luận (tùy chọn)</strong>
-              </label>
+            <div className="wizard-default-features">
+              <strong>Quản lý bài viết và bình luận</strong>
               <p>
-                {canRequestComments
-                  ? 'Chọn nếu bạn muốn đọc, trả lời, ẩn và xóa bình luận. Nếu Facebook báo lỗi quyền, bỏ chọn để kết nối đăng bài trước.'
-                  : 'Người cài đặt cần bật chức năng này trước. Bạn vẫn có thể kết nối Fanpage để đăng bài ngay.'}
+                SocialDesk tự xin quyền đăng, sửa, xóa bài viết và đọc, trả lời,
+                ẩn, xóa bình luận khi kết nối Fanpage. Bạn chỉ cần đồng ý trên
+                Facebook.
               </p>
             </div>
             {setupLoading && (
@@ -513,8 +494,8 @@ export default function ConnectionWizard({
               </p>
               <p>
                 Khi Facebook hỏi các chức năng được phép sử dụng, hãy đồng ý
-                đăng bài. Bình luận chỉ được hỏi khi bạn chọn thêm chức năng
-                này. Nếu vẫn chưa kết nối được, nhờ người cài đặt hỗ trợ.
+                quản lý bài viết và bình luận. Nếu Facebook báo quyền chưa được
+                hỗ trợ, nhờ người cài đặt kiểm tra quyền trong Meta App.
               </p>
             </details>
           </section>
@@ -610,9 +591,7 @@ export default function ConnectionWizard({
                         {report.commentsReady === true
                           ? 'Sẵn sàng'
                           : report.commentsReady === false
-                            ? canRequestComments
-                              ? 'Cần cho phép'
-                              : 'Cần người cài đặt bật'
+                            ? 'Cần cho phép'
                             : 'Đang chờ kiểm tra'}
                       </span>
                     </div>
@@ -718,17 +697,6 @@ export default function ConnectionWizard({
         )}
         {step === 3 && (
           <div className="button-row">
-            {report?.status === 'ready' &&
-              report.commentsReady === false &&
-              canRequestComments && (
-                <button
-                  className="button secondary"
-                  disabled={checking || setupLoading}
-                  onClick={() => reconnect(true)}
-                >
-                  Bật quản lý bình luận
-                </button>
-              )}
             <button
               className="button primary"
               disabled={checking || setupLoading}
@@ -737,9 +705,7 @@ export default function ConnectionWizard({
                 else if (report?.status === 'unknown')
                   setCheckRevision((v) => v + 1);
                 else if (report && report.status !== 'ready' && selected)
-                  reconnect(
-                    report.status === 'limited' && !!report.postingReady,
-                  );
+                  reconnect();
                 else onClose();
               }}
             >

@@ -8,13 +8,13 @@ Chạy **CHAY-LOCAL.cmd**, mở **http://localhost:8787**, đăng nhập rồi c
 
 1. Mở Meta App đã tạo, vào **Use cases → Manage everything on your Page → Customize**.
 2. Thêm các quyền `pages_read_user_content` và `pages_manage_engagement` nếu chúng có trong danh sách quyền của ứng dụng. Hoàn tất các yêu cầu Meta hiển thị cho quyền và tài khoản thử nghiệm của bạn.
-3. Chạy **CAU-HINH.cmd**, chọn `y` ở câu hỏi bật xin quyền quản lý bình luận, rồi mở lại **CHAY-LOCAL.cmd**. Thiết lập tương ứng là `META_COMMENTS_ENABLED=true`.
-4. Trong wizard SocialDesk, chọn **Thêm chức năng quản lý bình luận (tùy chọn)** trước khi mở Facebook. Với Fanpage đã kết nối, bấm **Kiểm tra kết nối → Bật quản lý bình luận**. Token cũ không tự nhận thêm quyền.
+3. SocialDesk mặc định xin cả quyền quản lý bài viết và bình luận. Không có ô bật/tắt bình luận và không cần biến cấu hình riêng cho chức năng này.
+4. Trong wizard SocialDesk, bấm **Mở Facebook và chọn Fanpage**, rồi đồng ý các quyền trên Facebook. Với Fanpage đã kết nối, bấm **Kiểm tra kết nối → Cho phép thêm quyền**. Token cũ không tự nhận thêm quyền.
 5. Chọn Fanpage bạn có quyền quản lý. Với Meta App thử nghiệm, tài khoản Facebook phải có vai trò phù hợp trong ứng dụng.
 
-Mặc định `META_COMMENTS_ENABLED=false`: kết nối chỉ xin ba quyền đăng bài, không xin hai quyền bình luận. Thiếu quyền bình luận không chặn kết nối hoặc đăng bài; wizard hiển thị riêng trạng thái bình luận. Kết nối cũ đã đủ quyền vẫn tiếp tục dùng bình luận được.
+Mọi lần kết nối và kết nối lại đều xin đủ năm quyền bên trên. Cấu hình cũ `META_COMMENTS_ENABLED=false` không còn vô hiệu hóa bình luận; trình khởi chạy tự loại bỏ biến cũ mà giữ nguyên App Secret, khóa mã hóa và dữ liệu. Wizard hiển thị **Cần cấp thêm quyền bình luận** nếu Fanpage chỉ có quyền đăng bài. Chỉ báo sẵn sàng đầy đủ khi đã xác minh đủ quyền.
 
-Nếu Facebook báo **Invalid Scopes: pages_read_user_content, pages_manage_engagement**, hai quyền này chưa được Facebook chấp nhận trong yêu cầu của ứng dụng hiện tại. Bỏ chọn bình luận để kết nối đăng bài trước. Người cài đặt cần kiểm tra quyền trong Meta App; nếu chưa thêm được, giữ tùy chọn xin quyền bình luận ở `n`. Không cần xóa Fanpage hoặc tạo lại khóa mã hóa.
+Nếu Facebook báo **Invalid Scopes: pages_read_user_content, pages_manage_engagement**, hai quyền này chưa được Facebook chấp nhận trong yêu cầu của ứng dụng hiện tại. Người cài đặt cần kiểm tra và thêm quyền trong Meta App ở bước 1–2 trước khi kết nối lại. Việc đặt chức năng thành mặc định trong SocialDesk không thay thế cấp quyền của Meta. Không cần xóa Fanpage hoặc tạo lại khóa mã hóa.
 
 Nếu bản local chưa có thông tin Meta App, chạy **CAU-HINH.cmd** để nhập App ID/App Secret trực tiếp trên máy; khởi động lại **CHAY-LOCAL.cmd**. Callback local là `http://localhost:8787/api/facebook/callback`. Giữ trống địa chỉ Internet khi chỉ dùng trên máy.
 

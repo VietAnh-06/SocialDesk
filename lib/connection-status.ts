@@ -6,7 +6,6 @@ type Config = {
   META_APP_SECRET?: string;
   TOKEN_ENCRYPTION_KEY?: string;
   META_GRAPH_VERSION?: string;
-  META_COMMENTS_ENABLED?: string;
   PUBLIC_APP_URL?: string;
 };
 export const facebookPermissions = [
@@ -36,15 +35,8 @@ export const facebookPermissions = [
     group: 'comments',
   },
 ] as const;
-export function commentPermissionsEnabled(config: Config) {
-  return /^(true|1)$/i.test(config.META_COMMENTS_ENABLED?.trim() || '');
-}
-
-export function requestedFacebookPermissions(includeComments = false) {
-  return facebookPermissions
-    .filter((p) => includeComments || p.group !== 'comments')
-    .map((p) => p.key)
-    .join(',');
+export function requestedFacebookPermissions() {
+  return facebookPermissions.map((p) => p.key).join(',');
 }
 export type SetupCheck = {
   key: string;
@@ -58,7 +50,6 @@ export type FacebookSetup = {
   callbackUrl: string | null;
   appId: string | null;
   callbackVerified: false;
-  commentsPermissionRequestEnabled: boolean;
 };
 export function facebookSetup(
   config: Config,
@@ -125,7 +116,6 @@ export function facebookSetup(
     callbackUrl,
     appId: appIdOk ? config.META_APP_ID!.trim() : null,
     callbackVerified: false,
-    commentsPermissionRequestEnabled: commentPermissionsEnabled(config),
   };
 }
 export type ConnectionHealth = {
@@ -255,19 +245,14 @@ export async function inspectConnection(
         (p) => p.key === 'pages_read_engagement' || p.group === 'comments',
       )
       .every((p) => p.granted);
-    // Comment permissions are optional; their absence must not block posting.
-    const missing = result.permissions.filter(
-      (p) => p.group !== 'comments' && !p.granted,
-    );
+    const missing = result.permissions.filter((p) => !p.granted);
     return {
       ...result,
       status: missing.length ? 'limited' : 'ready',
       title: missing.length ? 'Cần cấp thêm quyền' : 'Đã xác minh kết nối',
       message: missing.length
         ? 'Facebook chưa cấp đủ các quyền bên dưới cho Fanpage này. Bấm Kết nối lại và đồng ý các quyền cần dùng.'
-        : result.commentsReady
-          ? 'Phiên Facebook còn hiệu lực; đã có quyền quản lý bài viết và bình luận. Từng thao tác vẫn phụ thuộc quyền quản trị Fanpage của bạn.'
-          : 'Phiên Facebook còn hiệu lực và đã có quyền đăng bài. Quyền bình luận chưa đủ; bạn vẫn có thể quản lý bài viết.',
+        : 'Phiên Facebook còn hiệu lực; đã có quyền quản lý bài viết và bình luận. Từng thao tác vẫn phụ thuộc quyền quản trị Fanpage của bạn.',
     };
   } catch (error) {
     if (error instanceof GraphError && error.code === 190 && stage === 'debug')

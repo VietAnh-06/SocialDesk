@@ -70,9 +70,8 @@ async function mockWizard(
   ready = true,
   connectionKind: 'page' | 'profile' | 'none' = 'page',
   signedIn = true,
-  commentsEnabled = true,
 ) {
-  let status = 'posts-only';
+  let status = 'limited';
   const requests: string[] = [];
   await page.route('**/api/**', async (route) => {
     const req = route.request();
@@ -130,7 +129,6 @@ async function mockWizard(
         appId: '1496006092516967',
         callbackUrl: 'http://localhost:8787/api/facebook/callback',
         callbackVerified: false,
-        commentsPermissionRequestEnabled: commentsEnabled,
         checks: [
           {
             key: 'appId',
@@ -165,15 +163,15 @@ async function mockWizard(
       return send({
         connectionId: 'page-one',
         checkedAt: Date.now(),
-        status: status === 'posts-only' ? 'ready' : status,
+        status,
         title:
-          status === 'ready' || status === 'posts-only'
+          status === 'ready'
             ? 'Đã xác minh kết nối'
             : status === 'unknown'
               ? 'Chưa xác minh được kết nối'
               : 'Cần cấp thêm quyền',
         message:
-          status === 'ready' || status === 'posts-only'
+          status === 'ready'
             ? 'Đã được cấp các quyền cần dùng.'
             : status === 'unknown'
               ? 'Facebook chưa trả đủ thông tin. Hãy kiểm tra lại.'
@@ -289,7 +287,10 @@ test('wizard completes OAuth round trip, explains missing permissions and reconn
   await page.screenshot({ path: 'artifacts/wizard-step-two.png' });
   await expect(
     wizard.getByRole('checkbox', { name: /quản lý bình luận/ }),
-  ).not.toBeChecked();
+  ).toHaveCount(0);
+  await expect(wizard.locator('.wizard-default-features')).toContainText(
+    'Quản lý bài viết và bình luận',
+  );
   await expect(
     wizard.getByRole('link', { name: 'Mở Facebook và chọn Fanpage' }),
   ).toHaveAttribute('href', '/api/facebook/connect?guided=1');
@@ -300,14 +301,14 @@ test('wizard completes OAuth round trip, explains missing permissions and reconn
     wizard.getByRole('heading', { name: 'Hoàn tất kết nối' }),
   ).toBeVisible();
   await expect(
-    wizard.getByText('Fanpage đã sẵn sàng', { exact: true }),
+    wizard.getByText('Cần cấp thêm quyền bình luận', { exact: true }),
   ).toBeVisible();
   await expect(wizard.getByText('Chưa cấp', { exact: true })).toHaveCount(2);
   await page.screenshot({
     path: 'artifacts/wizard-step-three-permissions.png',
   });
   await wizard
-    .getByRole('button', { name: 'Bật quản lý bình luận', exact: true })
+    .getByRole('button', { name: 'Cho phép thêm quyền', exact: true })
     .click();
   await expect(
     wizard.getByRole('heading', { name: 'Kết nối lại Fanpage của An' }),
@@ -317,11 +318,11 @@ test('wizard completes OAuth round trip, explains missing permissions and reconn
   });
   await expect(reconnect).toHaveAttribute(
     'href',
-    '/api/facebook/connect?guided=1&connectionId=page-one&permissions=comments',
+    '/api/facebook/connect?guided=1&connectionId=page-one',
   );
   await expect(
     wizard.getByRole('checkbox', { name: /quản lý bình luận/ }),
-  ).toBeChecked();
+  ).toHaveCount(0);
   mock.setStatus('ready');
   await reconnect.click();
   await expect(
@@ -339,10 +340,10 @@ test('wizard completes OAuth round trip, explains missing permissions and reconn
   ).toHaveLength(2);
 });
 
-test('posting works without comment setup and the guide does not send users into a reconnect loop', async ({
+test('comment management is included by default and missing grants lead to reconnect without a toggle', async ({
   page,
 }) => {
-  await mockWizard(page, true, 'page', true, false);
+  await mockWizard(page);
   await page.goto('/');
   await page
     .getByRole('button', { name: 'Tài khoản kết nối', exact: true })
@@ -354,25 +355,33 @@ test('posting works without comment setup and the guide does not send users into
     name: 'Hướng dẫn kết nối Facebook',
   });
   await expect(
-    wizard.getByText('Fanpage đã sẵn sàng', { exact: true }),
+    wizard.getByText('Cần cấp thêm quyền bình luận', { exact: true }),
   ).toBeVisible();
-  await expect(
-    wizard.getByText('Bình luận: Cần người cài đặt bật'),
-  ).toBeVisible();
+  await expect(wizard.getByText('Bình luận: Cần cho phép')).toBeVisible();
   await expect(
     wizard.getByRole('button', { name: 'Bật quản lý bình luận', exact: true }),
   ).toHaveCount(0);
   await expect(
-    wizard.getByRole('button', { name: 'Bắt đầu sử dụng', exact: true }),
+    wizard.getByRole('button', { name: 'Cho phép thêm quyền', exact: true }),
   ).toBeEnabled();
-  await expect(wizard.locator('.wizard-missing-features')).toHaveCount(0);
-  await wizard.getByRole('button', { name: 'Quay lại', exact: true }).click();
+  await expect(wizard.locator('.wizard-missing-features')).toContainText(
+    'Đọc bình luận của người theo dõi',
+  );
+  await wizard
+    .getByRole('button', { name: 'Cho phép thêm quyền', exact: true })
+    .click();
   await expect(
     wizard.getByRole('checkbox', { name: /quản lý bình luận/ }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
+  await expect(wizard.locator('.wizard-default-features')).toContainText(
+    'Bạn chỉ cần đồng ý trên Facebook',
+  );
   await expect(
-    wizard.getByRole('link', { name: 'Mở Facebook và chọn Fanpage' }),
-  ).toHaveAttribute('href', '/api/facebook/connect?guided=1');
+    wizard.getByRole('link', { name: 'Đăng nhập lại trên Facebook' }),
+  ).toHaveAttribute(
+    'href',
+    '/api/facebook/connect?guided=1&connectionId=page-one',
+  );
 });
 
 test('unverified permissions remain unknown; checking and reconnecting are available from a Page card', async ({
